@@ -25,7 +25,7 @@ object IptvParser {
             
             while (line != null) {
                 val trimmed = line.trim()
-                if (trimmed.startsWith("#EXTINF:")) {
+                if (trimmed.startsWith("#EXTINF")) {
                     // Extract name (last part after comma)
                     val commaIndex = trimmed.lastIndexOf(',')
                     currentName = if (commaIndex != -1 && commaIndex < trimmed.length - 1) {
@@ -34,25 +34,42 @@ object IptvParser {
                         "Unknown Channel"
                     }
                     
-                    // Extract tvg-logo
-                    val logoRegex = """tvg-logo=["']([^"']+)["']""".toRegex()
-                    val logoMatch = logoRegex.find(trimmed)
+                    // Extract tvg-logo (quoted or unquoted)
+                    val logoRegexQuoted = """tvg-logo=["']([^"']+)["']""".toRegex()
+                    val logoRegexUnquoted = """tvg-logo=([^"\s,]+)""".toRegex()
+                    val logoMatch = logoRegexQuoted.find(trimmed) ?: logoRegexUnquoted.find(trimmed)
                     currentLogo = logoMatch?.groupValues?.get(1) ?: ""
                     
-                    // Extract group-title
-                    val groupRegex = """group-title=["']([^"']+)["']""".toRegex()
-                    val groupMatch = groupRegex.find(trimmed)
+                    // Extract group-title (quoted or unquoted)
+                    val groupRegexQuoted = """group-title=["']([^"']+)["']""".toRegex()
+                    val groupRegexUnquoted = """group-title=([^"\s,]+)""".toRegex()
+                    val groupMatch = groupRegexQuoted.find(trimmed) ?: groupRegexUnquoted.find(trimmed)
                     currentGroup = groupMatch?.groupValues?.get(1) ?: "All"
                 } else if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
                     if (currentName.isNotEmpty()) {
-                        channels.add(
-                            IptvChannel(
-                                name = currentName,
-                                logoUrl = currentLogo,
-                                streamUrl = trimmed,
-                                group = currentGroup
+                        // Split group by semicolons or commas to support multiple categories nicely
+                        val groups = currentGroup.split(';', ',').map { it.trim() }.filter { it.isNotBlank() }
+                        if (groups.isNotEmpty()) {
+                            for (g in groups) {
+                                channels.add(
+                                    IptvChannel(
+                                        name = currentName,
+                                        logoUrl = currentLogo,
+                                        streamUrl = trimmed,
+                                        group = g
+                                    )
+                                )
+                            }
+                        } else {
+                            channels.add(
+                                IptvChannel(
+                                    name = currentName,
+                                    logoUrl = currentLogo,
+                                    streamUrl = trimmed,
+                                    group = "All"
+                                )
                             )
-                        )
+                        }
                     }
                     // Reset
                     currentName = ""

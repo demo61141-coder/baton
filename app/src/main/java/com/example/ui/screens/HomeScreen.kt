@@ -327,28 +327,28 @@ fun HomeScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Header section: Watch & Visit description (customizable)
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
                                 text = settings.watchVisitText.ifBlank { "Watch & Visit" },
                                 color = Color(0xFF1D1B20),
-                                fontSize = 24.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center
                             )
                             Text(
                                 text = settings.watchVisitDesc.ifBlank { "Click on any server video below to watch a short ad and visit our premium stream links." },
                                 color = Color(0xFF49454F),
-                                fontSize = 13.sp,
+                                fontSize = 11.sp,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp)
                             )
                         }
 
@@ -356,35 +356,41 @@ fun HomeScreen(
                         if (settings.lastNotificationTitle.isNotBlank()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF3EDF7)),
                                 border = borderStroke(1.dp, Color(0xFFCAC4D0))
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(12.dp),
+                                        .padding(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Info,
                                         contentDescription = "Notification",
                                         tint = Color(0xFF6750A4),
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Column {
                                         Text(
                                             text = settings.lastNotificationTitle,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = Color(0xFF1D1B20)
-                                        )
-                                        Text(
-                                            text = settings.lastNotificationBody,
                                             fontSize = 12.sp,
-                                            color = Color(0xFF49454F)
+                                            color = Color(0xFF1D1B20),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        if (settings.lastNotificationBody.isNotBlank()) {
+                                            Text(
+                                                text = settings.lastNotificationBody,
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF49454F),
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -403,23 +409,23 @@ fun HomeScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(130.dp)
+                                        .height(85.dp)
                                         .clickable { onPortalSelected(button) }
                                         .testTag("watch_card_${button.id}"),
-                                    shape = RoundedCornerShape(28.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF3EDF7)),
                                     border = borderStroke(1.dp, Color(0xFFCAC4D0))
                                 ) {
-                                    Column(
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(12.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(44.dp)
+                                                .size(40.dp)
                                                 .clip(CircleShape)
                                                 .background(Color(0xFF6750A4)),
                                             contentAlignment = Alignment.Center
@@ -445,13 +451,13 @@ fun HomeScreen(
                                                         imageVector = Icons.Default.PlayArrow,
                                                         contentDescription = "Watch stream icon",
                                                         tint = Color.White,
-                                                        modifier = Modifier.size(22.dp)
+                                                        modifier = Modifier.size(18.dp)
                                                     )
                                                 }
                                             } else if (!button.emoji.isNullOrBlank()) {
                                                 Text(
                                                     text = button.emoji,
-                                                    fontSize = 22.sp,
+                                                    fontSize = 18.sp,
                                                     textAlign = TextAlign.Center
                                                 )
                                             } else {
@@ -459,22 +465,30 @@ fun HomeScreen(
                                                     imageVector = Icons.Default.PlayArrow,
                                                     contentDescription = "Watch stream icon",
                                                     tint = Color.White,
-                                                    modifier = Modifier.size(22.dp)
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
                                         
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        
-                                        Text(
-                                            text = button.name,
-                                            color = Color(0xFF1D1B20),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = button.name,
+                                                color = Color(0xFF1D1B20),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = "লাইভ সার্ভার",
+                                                color = Color(0xFF6750A4),
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
                                     }
                                 }
                             }

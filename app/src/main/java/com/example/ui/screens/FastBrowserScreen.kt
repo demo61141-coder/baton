@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.data.AppSettings
+import com.example.data.DownloadTracker
+import com.example.data.DownloadTask
 import kotlinx.coroutines.launch
 
 // Dynamic model representing individual browser tabs with standard compose state delegation
@@ -103,6 +105,17 @@ fun FastBrowserScreen(
     // List of detected video streaming/file URLs
     val detectedVideos = remember { mutableStateListOf<Pair<String, String>>() }
     var showDownloadSheet by remember { mutableStateOf(false) }
+    var showTaskManager by remember { mutableStateOf(false) }
+
+    // States for custom download bottom sheet
+    var selectedDownloadUrl by remember { mutableStateOf("") }
+    var selectedDownloadTitle by remember { mutableStateOf("") }
+    var customRenameTitle by remember { mutableStateOf("") }
+    var showRenameDialog by remember { mutableStateOf(false) }
+
+    // Quality selection
+    var selectedQualityType by remember { mutableStateOf("video") } // "music" or "video"
+    var selectedQualityLabel by remember { mutableStateOf("360P") } // e.g., "360P", "128K"
 
     // JavaScript interface helper to detect videos across tabs
     val videoDetectorInterface = remember {
@@ -143,6 +156,12 @@ fun FastBrowserScreen(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnTouchListener { v, event ->
+                v.requestFocus()
+                false
+            }
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -154,7 +173,7 @@ fun FastBrowserScreen(
                 builtInZoomControls = true
                 displayZoomControls = false
                 userAgentString = "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                setSupportMultipleWindows(true)
+                setSupportMultipleWindows(false)
             }
         }
 
@@ -411,12 +430,20 @@ fun FastBrowserScreen(
                                     }
                                 ),
                                 leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search",
-                                        modifier = Modifier.size(18.dp),
-                                        tint = Color.Gray
-                                    )
+                                    IconButton(
+                                        onClick = {
+                                            keyboardController?.hide()
+                                            activeTab?.let { navigateTab(it, searchInput) }
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = "Search",
+                                            modifier = Modifier.size(18.dp),
+                                            tint = Color.Gray
+                                        )
+                                    }
                                 },
                                 trailingIcon = {
                                     if (searchInput.isNotEmpty()) {
@@ -589,7 +616,7 @@ fun FastBrowserScreen(
                                 leadingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Black) },
                                 onClick = {
                                     showMenuDropdown = false
-                                    showDownloadSheet = true
+                                    showTaskManager = true
                                 }
                             )
                             DropdownMenuItem(
@@ -613,7 +640,15 @@ fun FastBrowserScreen(
             ) {
                 Box(contentAlignment = Alignment.TopEnd) {
                     ExtendedFloatingActionButton(
-                        onClick = { showDownloadSheet = true },
+                        onClick = {
+                            val lastVid = detectedVideos.lastOrNull()
+                            selectedDownloadUrl = lastVid?.first ?: ""
+                            selectedDownloadTitle = lastVid?.second ?: activeTab?.title ?: "Video File"
+                            customRenameTitle = selectedDownloadTitle
+                            selectedQualityType = "video"
+                            selectedQualityLabel = "360P"
+                            showDownloadSheet = true
+                        },
                         containerColor = Color(0xFF34A853),
                         contentColor = Color.White,
                         shape = CircleShape,
@@ -681,11 +716,8 @@ fun FastBrowserScreen(
                         value = searchInput,
                         onValueChange = {
                             searchInput = it
-                            if (it.isNotEmpty()) {
-                                // If they start typing on the homepage, keep it in the search input
-                            }
                         },
-                        placeholder = { }, // Kept blank to match the screenshot perfectly
+                        placeholder = { Text("Search or enter URL", color = Color.Gray, fontSize = 14.sp) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Search
@@ -698,6 +730,33 @@ fun FastBrowserScreen(
                                 }
                             }
                         ),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchInput.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        keyboardController?.hide()
+                                        if (searchInput.isNotBlank()) {
+                                            activeTab?.let { navigateTab(it, searchInput) }
+                                        }
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Search Now",
+                                        tint = Color(0xFF6750A4)
+                                    )
+                                }
+                            }
+                        },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
@@ -746,7 +805,7 @@ fun FastBrowserScreen(
                         AndroidView(
                             modifier = Modifier.fillMaxSize(),
                             factory = { activeTab.webView },
-                            update = { /* handled by factory key */ }
+                            update = { }
                         )
                     }
                 } else {
@@ -929,136 +988,541 @@ fun FastBrowserScreen(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // Header Row (Thumbnail, Title, Rename)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "ভিডিও ডাউনলোড ম্যানেজার",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1D1B20)
-                    )
-                    TextButton(
-                        onClick = {
-                            detectedVideos.clear()
-                            showDownloadSheet = false
-                        }
+                    // Video Thumbnail Placeholder
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp, 60.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("সব মুছুন", color = Color.Red)
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Video",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        // Duration Overlay
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentAlignment = Alignment.BottomEnd
+                        ) {
+                            Text(
+                                text = "02:05:06",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                modifier = Modifier
+                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+
+                    // Title & Rename Button
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = customRenameTitle.ifBlank { "ভিডিও ফাইল" },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        
+                        TextButton(
+                            onClick = { showRenameDialog = true },
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.height(24.dp)
+                        ) {
+                            Text("Rename", color = Color(0xFF1E88E5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFFCAC4D0).copy(alpha = 0.5f))
-
-                if (detectedVideos.isEmpty()) {
-                    Box(
+                // Storage Path Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("কোন ভিডিও সনাক্ত করা হয়নি", color = Color.Gray, fontSize = 13.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Folder",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Path: /storage/emulated/0/Download/",
+                                    fontSize = 11.sp,
+                                    color = Color.DarkGray
+                                )
+                                Text(
+                                    text = "2.7GB FREE / 7.4GB",
+                                    fontSize = 10.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        
+                        TextButton(
+                            onClick = {
+                                Toast.makeText(context, "ডিফল্ট ডাউনলোড ফোল্ডার সেট করা আছে।", Toast.LENGTH_SHORT).show()
+                            },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("Change", color = Color(0xFF1E88E5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 350.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                }
+
+                // Music Section
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(detectedVideos) { video ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9FB)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                        Text(
-                                            text = video.second.ifBlank { "Video Stream Source" },
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            color = Color(0xFF1D1B20),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = video.first,
-                                            fontSize = 11.sp,
-                                            color = Color.Gray,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Music",
+                            tint = Color.Red,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text("Music", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                    }
 
-                                    IconButton(
-                                        onClick = {
-                                            try {
-                                                val uri = Uri.parse(video.first)
-                                                val request = DownloadManager.Request(uri).apply {
-                                                    setTitle(video.second.ifBlank { "Downloaded Video" })
-                                                    setDescription("ডাউনলোড হচ্ছে...")
-                                                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                                    setDestinationInExternalPublicDir(
-                                                        Environment.DIRECTORY_DOWNLOADS,
-                                                        "all_live_video_" + System.currentTimeMillis() + when {
-                                                            video.first.contains(".mp4", ignoreCase = true) -> ".mp4"
-                                                            video.first.contains(".mkv", ignoreCase = true) -> ".mkv"
-                                                            video.first.contains(".webm", ignoreCase = true) -> ".webm"
-                                                            video.first.contains(".mp3", ignoreCase = true) -> ".mp3"
-                                                            else -> ".mp4"
-                                                        }
-                                                    )
-                                                    setAllowedOverMetered(true)
-                                                    setAllowedOverRoaming(true)
-                                                }
-
-                                                val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                                                downloadManager.enqueue(request)
-
-                                                Toast.makeText(
-                                                    context,
-                                                    "ডাউনলোড শুরু হয়েছে! নোটিফিকেশন বার চেক করুন।",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                            } catch (e: Exception) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "ডাউনলোড ব্যর্থ হয়েছে: ${e.localizedMessage}",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                            }
-                                            showDownloadSheet = false
-                                        },
+                    Column {
+                        val musicOptions = listOf(
+                            Pair("48K (M4A)", "45.77MB"),
+                            Pair("48K (MP3) SLOW", "45.77MB"),
+                            Pair("128K (M4A)", "121.48MB"),
+                            Pair("128K (MP3) SLOW", "121.48MB"),
+                            Pair("256K (MP3) SLOW", "138.12MB")
+                        )
+                        
+                        // Render in 2 columns
+                        musicOptions.chunked(2).forEach { rowOptions ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                rowOptions.forEach { option ->
+                                    val isSelected = selectedQualityType == "music" && selectedQualityLabel == option.first
+                                    Row(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .background(Color(0xFFEADDFF), shape = CircleShape)
+                                            .weight(1f)
+                                            .clickable {
+                                                selectedQualityType = "music"
+                                                selectedQualityLabel = option.first
+                                            }
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowDropDown,
-                                            contentDescription = "Download Item",
-                                            tint = Color(0xFF21005D),
-                                            modifier = Modifier.size(20.dp)
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = {
+                                                selectedQualityType = "music"
+                                                selectedQualityLabel = option.first
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Color.Red)
                                         )
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(option.first, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                                if (option.first.contains("SLOW")) {
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
+                                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    ) {
+                                                        Text("SLOW", fontSize = 8.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+                                            Text(option.second, fontSize = 10.sp, color = Color.Gray)
+                                        }
                                     }
+                                }
+                                if (rowOptions.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                // Video Section
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Video",
+                            tint = Color.Red,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text("Video", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                    }
+
+                    Column {
+                        val videoOptions = listOf(
+                            Pair("144P (MP4)", "159.83MB"),
+                            Pair("240P (MP4)", "217.29MB"),
+                            Pair("360P (MP4)", "560.81MB"),
+                            Pair("480P (MP4)", "454.84MB"),
+                            Pair("720P HD (MP4)", "780.12MB"),
+                            Pair("1080P HD (MP4)", "1.20GB")
+                        )
+                        
+                        // Render in 2 columns
+                        videoOptions.chunked(2).forEach { rowOptions ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                rowOptions.forEach { option ->
+                                    val isSelected = selectedQualityType == "video" && selectedQualityLabel == option.first
+                                    Row(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                selectedQualityType = "video"
+                                                selectedQualityLabel = option.first
+                                            }
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = {
+                                                selectedQualityType = "video"
+                                                selectedQualityLabel = option.first
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Color.Red)
+                                        )
+                                        Column {
+                                            Text(option.first, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                            Text(option.second, fontSize = 10.sp, color = Color.Gray)
+                                        }
+                                    }
+                                }
+                                if (rowOptions.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Big red DOWNLOAD button
+                Button(
+                    onClick = {
+                        try {
+                            val urlToDownload = selectedDownloadUrl.ifBlank { activeTab?.url ?: "" }
+                            if (urlToDownload.isBlank() || urlToDownload.startsWith("internal://")) {
+                                Toast.makeText(context, "ডাউনলোড করার মত কোন ভিডিও পাওয়া যায়নি!", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+
+                            val extension = if (selectedQualityType == "music") {
+                                if (selectedQualityLabel.contains("M4A")) ".m4a" else ".mp3"
+                            } else {
+                                ".mp4"
+                            }
+
+                            val cleanTitle = customRenameTitle.ifBlank { "Stream_Video" }
+                                .replace(Regex("[\\\\/:*?\"<>|]"), "_") // clean special chars
+                            
+                            val finalFileName = "${cleanTitle}_${selectedQualityLabel.replace(" ", "_")}$extension"
+
+                            val uri = Uri.parse(urlToDownload)
+                            val request = DownloadManager.Request(uri).apply {
+                                setTitle(finalFileName)
+                                setDescription("ডাউনলোড হচ্ছে...")
+                                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, finalFileName)
+                                setAllowedOverMetered(true)
+                                setAllowedOverRoaming(true)
+                            }
+
+                            val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                            val id = downloadManager.enqueue(request)
+
+                            // Add to our high-fidelity custom DownloadTracker
+                            DownloadTracker.addDownload(
+                                context = context,
+                                downloadId = id,
+                                title = cleanTitle,
+                                quality = selectedQualityLabel,
+                                fileType = selectedQualityType
+                            )
+
+                            Toast.makeText(context, "ডাউনলোড টাস্ক যোগ করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                            showDownloadSheet = false
+                            showTaskManager = true // open the Task Added / Download Manager screen!
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "ডাউনলোড টাস্ক শুরু করা যায়নি: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30)),
+                    shape = RoundedCornerShape(25.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("DOWNLOAD", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+        }
+    }
+
+    // Custom Rename dialog
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename File", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = customRenameTitle,
+                    onValueChange = { customRenameTitle = it },
+                    label = { Text("File Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showRenameDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4))
+                ) {
+                    Text("Done")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // High-Fidelity Download Task Manager Screen / Overlay (Matches 3rd screenshot perfectly)
+    if (showTaskManager) {
+        val tasks by DownloadTracker.tasks.collectAsState()
+        
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.White
+        ) {
+            Scaffold(
+                topBar = {
+                    OptIn(ExperimentalMaterial3Api::class)
+                    TopAppBar(
+                        title = { 
+                            Text(
+                                text = "Task Added", 
+                                fontWeight = FontWeight.Bold, 
+                                color = Color.Black,
+                                fontSize = 20.sp
+                            ) 
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { showTaskManager = false }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                                    contentDescription = "Back",
+                                    tint = Color.Black
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { DownloadTracker.clearAll() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete, 
+                                    contentDescription = "Clear All",
+                                    tint = Color.Black
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                    )
+                }
+            ) { innerPadding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(Color(0xFFF9F9FB))
+                        .padding(16.dp)
+                ) {
+                    if (tasks.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown, 
+                                    contentDescription = null, 
+                                    tint = Color.LightGray, 
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Text("কোন সক্রিয় বা সমাপ্ত ডাউনলোড নেই", color = Color.Gray, fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "More videos", 
+                            fontWeight = FontWeight.Bold, 
+                            color = Color.Black,
+                            fontSize = 15.sp,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(tasks) { task ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(0.5.dp, Color(0xFFE0E0E0))
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Left Thumbnail Card
+                                        Box(
+                                            modifier = Modifier
+                                                .size(100.dp, 60.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color.Black),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (task.fileType == "music") Icons.Default.Star else Icons.Default.PlayArrow,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            
+                                            // Bottom-left Quality tag overlay (e.g. 360p)
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(4.dp),
+                                                contentAlignment = Alignment.BottomStart
+                                            ) {
+                                                Text(
+                                                    text = task.quality,
+                                                    color = Color.White,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier
+                                                        .background(Color.Red, RoundedCornerShape(2.dp))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+
+                                        // Middle Details
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = task.title,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.Black,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            
+                                            // Progress Bar
+                                            LinearProgressIndicator(
+                                                progress = { task.progress },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(4.dp)
+                                                    .clip(RoundedCornerShape(2.dp)),
+                                                color = Color(0xFF00C853),
+                                                trackColor = Color(0xFFE0E0E0)
+                                            )
+                                            
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val downloadedMB = String.format("%.2f MB", task.downloadedBytes / (1024.0 * 1024.0))
+                                                val totalMB = if (task.totalBytes > 0) String.format("%.2f MB", task.totalBytes / (1024.0 * 1024.0)) else "Unknown"
+                                                
+                                                Text(
+                                                    text = "$downloadedMB / $totalMB",
+                                                    fontSize = 11.sp,
+                                                    color = Color.Gray
+                                                )
+                                                
+                                                Text(
+                                                    text = task.speedString,
+                                                    fontSize = 11.sp,
+                                                    color = if (task.status == DownloadManager.STATUS_RUNNING) Color(0xFF1E88E5) else Color.Gray,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+
+                                        // Action Button (Delete)
+                                        IconButton(
+                                            onClick = { DownloadTracker.removeTask(task.downloadId) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close, 
+                                                contentDescription = "Cancel/Remove",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

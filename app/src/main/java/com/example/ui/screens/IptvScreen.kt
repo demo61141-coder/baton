@@ -6,6 +6,8 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
@@ -155,7 +157,7 @@ fun IptvScreen(
                 .padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            val tabs = listOf("Primary Server", "Secondary Server", "Imported M3U")
+            val tabs = listOf("Server 1", "Server 2", "Imported M3U")
             tabs.forEachIndexed { index, title ->
                 val active = activeSourceIndex == index + 1
                 Box(
@@ -178,7 +180,7 @@ fun IptvScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Search Bar with Sleek Neon glow borders
         OutlinedTextField(
@@ -207,13 +209,15 @@ fun IptvScreen(
                 .testTag("iptv_search_input")
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Group selection horizontal scroll list
+        // Group selection horizontal scroll list (Fully scrollable, modern chips style)
         if (groups.size > 1) {
+            val scrollState = rememberScrollState()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(scrollState)
                     .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -227,9 +231,7 @@ fun IptvScreen(
                     Text("ক্যাটাগরি:", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
                 }
                 
-                // Show a couple of categories or a simplified selector to keep page clean
-                val displayGroups = groups.take(4)
-                displayGroups.forEach { grp ->
+                groups.forEach { grp ->
                     val isSel = selectedGroup == grp
                     Box(
                         modifier = Modifier
@@ -248,7 +250,7 @@ fun IptvScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
         // Channels layout
@@ -285,29 +287,29 @@ fun IptvScreen(
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredChannels) { channel ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(130.dp)
+                                .height(85.dp)
                                 .clickable { onChannelSelected(channel) }
                                 .testTag("iptv_channel_card_${channel.name}"),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
                             border = CardDefaults.outlinedCardBorder().copy(
                                 brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.1f), Color.Transparent))
                             )
                         ) {
-                            Column(
+                            Row(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.SpaceBetween
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 // Logo holder
                                 if (channel.logoUrl.isNotBlank()) {
@@ -316,7 +318,7 @@ fun IptvScreen(
                                         contentDescription = channel.name,
                                         contentScale = ContentScale.Fit,
                                         modifier = Modifier
-                                            .size(50.dp)
+                                            .size(40.dp)
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(Color.White.copy(alpha = 0.1f))
                                             .padding(4.dp)
@@ -325,7 +327,7 @@ fun IptvScreen(
                                     // Elegant fallback icon
                                     Box(
                                         modifier = Modifier
-                                            .size(50.dp)
+                                            .size(40.dp)
                                             .clip(CircleShape)
                                             .background(
                                                 Brush.radialGradient(
@@ -338,31 +340,31 @@ fun IptvScreen(
                                             text = channel.name.take(1).uppercase(),
                                             color = Color.White,
                                             fontWeight = FontWeight.Black,
-                                            fontSize = 20.sp
+                                            fontSize = 16.sp
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
                                     Text(
                                         text = channel.name,
                                         color = Color.White,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth()
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     if (channel.group.isNotBlank()) {
                                         Text(
                                             text = channel.group,
                                             color = Color(0xFF00F2FE),
-                                            fontSize = 9.sp,
+                                            fontSize = 8.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            textAlign = TextAlign.Center
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
