@@ -1,0 +1,6 @@
+{
+  "name": "All Live",
+  "description": "An interactive live portal featuring dynamic streaming links, customizable video ad monetization, and Google Sheets config management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
