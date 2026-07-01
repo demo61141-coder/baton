@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
@@ -77,6 +78,17 @@ fun HomeScreen(
     var showAdOverlay3Dot by remember { mutableStateOf(false) }
     var ad3DotSecondsRemaining by remember { mutableStateOf(5) }
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    // System back button intercepts exits and routes back to streams tab or dismisses active dialogs
+    BackHandler(enabled = currentTab != 0 || showAboutDialog || showSecurityDialog) {
+        if (showAboutDialog) {
+            showAboutDialog = false
+        } else if (showSecurityDialog) {
+            showSecurityDialog = false
+        } else {
+            currentTab = 0
+        }
+    }
 
     // Reload callback to trigger on updates
     fun reloadAll() {

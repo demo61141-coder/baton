@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import coil.compose.AsyncImage
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.shape.CircleShape
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -33,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.*
@@ -53,6 +58,11 @@ fun AdminScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Intercept system back press to go back to Home Screen
+    BackHandler {
+        onBack()
+    }
 
     // Load active configurations
     var settings by remember { mutableStateOf(AppConfigManager.loadSettings(context)) }
@@ -168,6 +178,12 @@ fun AdminScreen(
         mutableStateOf(AppConfigManager.parseCustomMenuItems(settings.customFeaturesJson))
     }
 
+    var adsEnabledInput by remember { mutableStateOf(settings.adsEnabled) }
+    var backAdEnabledInput by remember { mutableStateOf(settings.backAdEnabled) }
+    var iptvServer1EnabledInput by remember { mutableStateOf(settings.iptvServer1Enabled) }
+    var iptvServer2EnabledInput by remember { mutableStateOf(settings.iptvServer2Enabled) }
+    var iptvPendingFileContentInput by remember { mutableStateOf(settings.iptvPendingFileContent) }
+
     fun refreshAll() {
         settings = AppConfigManager.loadSettings(context)
         buttons = AppConfigManager.loadButtons(context)
@@ -186,6 +202,11 @@ fun AdminScreen(
         browserShortcutsList = AppConfigManager.parseShortcuts(settings.browserShortcutsJson)
         searchEngineUrlInput = settings.searchEngineUrl
         customMenuItemsList = AppConfigManager.parseCustomMenuItems(settings.customFeaturesJson)
+        adsEnabledInput = settings.adsEnabled
+        backAdEnabledInput = settings.backAdEnabled
+        iptvServer1EnabledInput = settings.iptvServer1Enabled
+        iptvServer2EnabledInput = settings.iptvServer2Enabled
+        iptvPendingFileContentInput = settings.iptvPendingFileContent
     }
 
     Scaffold(
@@ -266,6 +287,16 @@ fun AdminScreen(
                     selected = activeTab == 4,
                     onClick = { activeTab = 4 },
                     text = { Text("Premium & Security", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = activeTab == 5,
+                    onClick = { activeTab = 5 },
+                    text = { Text("Browser & Bookmarks", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = activeTab == 6,
+                    onClick = { activeTab = 6 },
+                    text = { Text("Ads Control 📢", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 )
             }
 
@@ -1236,159 +1267,409 @@ fun AdminScreen(
                              }
                          }
                      }
-                     2 -> {
-                         // IPTV CONFIGURATION
-                         val scrollState2 = rememberScrollState()
-                         Column(
-                             modifier = Modifier
-                                 .fillMaxSize()
-                                 .verticalScroll(scrollState2)
-                                 .padding(16.dp),
-                             verticalArrangement = Arrangement.spacedBy(16.dp)
-                         ) {
-                             Card(
-                                 modifier = Modifier.fillMaxWidth(),
-                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                                 shape = RoundedCornerShape(20.dp),
-                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                             ) {
-                                 Column(
-                                     modifier = Modifier.padding(16.dp),
-                                     verticalArrangement = Arrangement.spacedBy(12.dp)
-                                 ) {
-                                     Text(
-                                         text = "IPTV প্লেলিস্ট ও চ্যানেল সেটিংস",
-                                         color = MaterialTheme.colorScheme.primary,
-                                         fontSize = 15.sp,
-                                         fontWeight = FontWeight.Bold
-                                     )
-                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                      2 -> {
+                          // IPTV CONFIGURATION
+                          val scrollState2 = rememberScrollState()
+                          Column(
+                              modifier = Modifier
+                                  .fillMaxSize()
+                                  .verticalScroll(scrollState2)
+                                  .padding(16.dp),
+                              verticalArrangement = Arrangement.spacedBy(16.dp)
+                          ) {
+                              Card(
+                                  modifier = Modifier.fillMaxWidth(),
+                                  colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                  shape = RoundedCornerShape(20.dp),
+                                  border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                              ) {
+                                  Column(
+                                      modifier = Modifier.padding(16.dp),
+                                      verticalArrangement = Arrangement.spacedBy(12.dp)
+                                  ) {
+                                      Text(
+                                          text = "IPTV প্লেলিস্ট ও চ্যানেল সেটিংস",
+                                          color = MaterialTheme.colorScheme.primary,
+                                          fontSize = 15.sp,
+                                          fontWeight = FontWeight.Bold
+                                      )
+                                      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                                     Row(
-                                         modifier = Modifier.fillMaxWidth(),
-                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                         verticalAlignment = Alignment.CenterVertically
-                                     ) {
-                                         Column(modifier = Modifier.weight(1f)) {
-                                             Text("IPTV ফিচার চালু করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                             Text("অন করলে ব্যবহারকারীদের জন্য IPTV ট্যাবটি প্রদর্শিত হবে", fontSize = 11.sp, color = Color.Gray)
-                                         }
-                                         Switch(
-                                             checked = iptvEnabledInput,
-                                             onCheckedChange = { iptvEnabledInput = it }
-                                         )
-                                     }
+                                      Row(
+                                          modifier = Modifier.fillMaxWidth(),
+                                          horizontalArrangement = Arrangement.SpaceBetween,
+                                          verticalAlignment = Alignment.CenterVertically
+                                      ) {
+                                          Column(modifier = Modifier.weight(1f)) {
+                                              Text("IPTV ফিচার চালু করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                              Text("অন করলে ব্যবহারকারীদের জন্য IPTV ট্যাবটি প্রদর্শিত হবে", fontSize = 11.sp, color = Color.Gray)
+                                          }
+                                          Switch(
+                                              checked = iptvEnabledInput,
+                                              onCheckedChange = { iptvEnabledInput = it }
+                                          )
+                                      }
 
-                                     OutlinedTextField(
-                                         value = iptvPlaylistUrlInput,
-                                         onValueChange = { iptvPlaylistUrlInput = it },
-                                         label = { Text("Primary M3U Playlist URL") },
-                                         modifier = Modifier.fillMaxWidth(),
-                                         singleLine = true
-                                     )
+                                      Row(
+                                          modifier = Modifier.fillMaxWidth(),
+                                          horizontalArrangement = Arrangement.SpaceBetween,
+                                          verticalAlignment = Alignment.CenterVertically
+                                      ) {
+                                          Column(modifier = Modifier.weight(1f)) {
+                                              Text("IPTV সার্ভার ১ (Server 1) চালু রাখুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                              Text("সার্ভার ১ থেকে লোড হওয়া সোর্স চ্যানেলগুলো দেখাবে", fontSize = 11.sp, color = Color.Gray)
+                                          }
+                                          Switch(
+                                              checked = iptvServer1EnabledInput,
+                                              onCheckedChange = { iptvServer1EnabledInput = it }
+                                          )
+                                      }
 
-                                     OutlinedTextField(
-                                         value = iptvSecondaryUrlInput,
-                                         onValueChange = { iptvSecondaryUrlInput = it },
-                                         label = { Text("Backup M3U Playlist URL (Optional)") },
-                                         modifier = Modifier.fillMaxWidth(),
-                                         singleLine = true
-                                     )
+                                      Row(
+                                          modifier = Modifier.fillMaxWidth(),
+                                          horizontalArrangement = Arrangement.SpaceBetween,
+                                          verticalAlignment = Alignment.CenterVertically
+                                      ) {
+                                          Column(modifier = Modifier.weight(1f)) {
+                                              Text("IPTV সার্ভার ২ (Server 2) চালু রাখুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                              Text("সার্ভার ২ থেকে লোড হওয়া সোর্স চ্যানেলগুলো দেখাবে", fontSize = 11.sp, color = Color.Gray)
+                                          }
+                                          Switch(
+                                              checked = iptvServer2EnabledInput,
+                                              onCheckedChange = { iptvServer2EnabledInput = it }
+                                          )
+                                      }
 
-                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                      OutlinedTextField(
+                                          value = iptvPlaylistUrlInput,
+                                          onValueChange = { iptvPlaylistUrlInput = it },
+                                          label = { Text("Primary M3U Playlist URL") },
+                                          modifier = Modifier.fillMaxWidth(),
+                                          singleLine = true
+                                      )
 
-                                     val filePickerLauncher = rememberLauncherForActivityResult(
-                                         contract = ActivityResultContracts.GetContent()
-                                     ) { uri ->
-                                         uri?.let {
-                                             try {
-                                                 val inputStream = context.contentResolver.openInputStream(uri)
-                                                 val text = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
-                                                 if (text.isNotBlank()) {
-                                                     iptvFileContentInput = text
-                                                     val updated = settings.copy(iptvFileContent = text)
-                                                     AppConfigManager.saveSettings(context, updated)
-                                                     settings = updated
-                                                     Toast.makeText(context, "M3U ফাইল সফলভাবে ইম্পোর্ট করা হয়েছে!", Toast.LENGTH_LONG).show()
-                                                 } else {
-                                                     Toast.makeText(context, "ফাইলটি খালি বা পড়া যায়নি!", Toast.LENGTH_SHORT).show()
-                                                 }
-                                             } catch (e: Exception) {
-                                                 Toast.makeText(context, "ফাইল ইম্পোর্ট করতে সমস্যা হয়েছে!", Toast.LENGTH_SHORT).show()
-                                             }
-                                         }
-                                     }
+                                      OutlinedTextField(
+                                          value = iptvSecondaryUrlInput,
+                                          onValueChange = { iptvSecondaryUrlInput = it },
+                                          label = { Text("Backup M3U Playlist URL (Optional)") },
+                                          modifier = Modifier.fillMaxWidth(),
+                                          singleLine = true
+                                      )
 
-                                     Row(
-                                         modifier = Modifier.fillMaxWidth(),
-                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                     ) {
-                                         Button(
-                                             onClick = {
-                                                 try {
-                                                     filePickerLauncher.launch("*/*")
-                                                 } catch (e: Exception) {
-                                                     Toast.makeText(context, "ফাইল সিলেক্টর চালু করা যায়নি।", Toast.LENGTH_SHORT).show()
-                                                 }
-                                             },
-                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
-                                             shape = RoundedCornerShape(12.dp),
-                                             modifier = Modifier.weight(1f)
-                                         ) {
-                                             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                                             Spacer(modifier = Modifier.width(4.dp))
-                                             Text("ফাইল ইম্পোর্ট (.m3u)", color = Color.White, fontSize = 11.sp)
-                                         }
+                                      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                                         Button(
-                                             onClick = {
-                                                 val updated = settings.copy(
-                                                     iptvEnabled = iptvEnabledInput,
-                                                     iptvPlaylistUrl = iptvPlaylistUrlInput,
-                                                     iptvSecondaryUrl = iptvSecondaryUrlInput,
-                                                     iptvFileContent = iptvFileContentInput
-                                                 )
-                                                 AppConfigManager.saveSettings(context, updated)
-                                                 settings = updated
-                                                 Toast.makeText(context, "IPTV সেটিংস সফলভাবে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
-                                                 onConfigUpdated()
-                                             },
-                                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                             shape = RoundedCornerShape(12.dp),
-                                             modifier = Modifier.weight(1f)
-                                         ) {
-                                             Text("সেটিংস সেভ করুন", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp)
-                                         }
-                                     }
+                                      val filePickerLauncher = rememberLauncherForActivityResult(
+                                          contract = ActivityResultContracts.GetContent()
+                                      ) { uri ->
+                                          uri?.let {
+                                              try {
+                                                  val inputStream = context.contentResolver.openInputStream(uri)
+                                                  val text = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+                                                  if (text.isNotBlank()) {
+                                                      iptvPendingFileContentInput = text
+                                                      val updated = settings.copy(iptvPendingFileContent = text)
+                                                      AppConfigManager.saveSettings(context, updated)
+                                                      settings = updated
+                                                      Toast.makeText(context, "M3U ফাইলটি অপেক্ষমান তালিকায় লোড হয়েছে। নিচের এপ্রুভাল প্যানেল থেকে সিলেক্ট করুন!", Toast.LENGTH_LONG).show()
+                                                  } else {
+                                                      Toast.makeText(context, "ফাইলটি খালি বা পড়া যায়নি!", Toast.LENGTH_SHORT).show()
+                                                  }
+                                              } catch (e: Exception) {
+                                                  Toast.makeText(context, "ফাইল ইম্পোর্ট করতে সমস্যা হয়েছে!", Toast.LENGTH_SHORT).show()
+                                              }
+                                          }
+                                      }
 
-                                     Card(
-                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                         shape = RoundedCornerShape(12.dp),
-                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                         modifier = Modifier.fillMaxWidth()
-                                     ) {
-                                         Column(
-                                             modifier = Modifier.padding(12.dp),
-                                             verticalArrangement = Arrangement.spacedBy(8.dp)
-                                         ) {
-                                             Text(
-                                                 text = "আইপি টিভি (IPTV) সেটআপ করার সম্পূর্ণ গাইড ও নিয়মাবলী:",
-                                                 fontWeight = FontWeight.Bold,
-                                                 color = MaterialTheme.colorScheme.primary,
-                                                 fontSize = 13.sp
-                                             )
-                                             Text(
-                                                 text = "১. কিভাবে লিংক দিয়ে সেটআপ করবেন: 'Primary M3U Playlist URL' বক্সে আপনার আইপি টিভি সার্ভার বা প্রোভাইডারের ডিরেক্ট .m3u এক্সটেনশন লিংকটি বসান এবং নিচে 'সেটিংস সেভ করুন' বাটনে চাপ দিন।\n২. কিভাবে গ্যালারি/স্টোরেজ থেকে ফাইল দিয়ে সেটআপ করবেন: সরাসরি ফাইল ইমপোর্ট করতে 'ফাইল ইম্পোর্ট (.m3u)' লাল বাটনে চাপ দিন এবং আপনার ডিভাইস থেকে .m3u ফাইলটি সিলেক্ট করুন। ফাইলটির সমস্ত চ্যানেল কোড সরাসরি বক্সে লোড হবে। এরপর সেভ করুন।\n৩. ব্যবহারকারীদের জন্য IPTV ট্যাব অন/অফ করতে চাইলে উপরে 'IPTV ফিচার চালু করুন' সুইচটি ব্যবহার করতে পারবেন।",
-                                                 fontSize = 11.sp,
-                                                 lineHeight = 16.sp,
-                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
-                                             )
-                                         }
-                                     }
-                                 }
-                             }
-                         }
-                     }
+                                      Row(
+                                          modifier = Modifier.fillMaxWidth(),
+                                          horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                      ) {
+                                          Button(
+                                              onClick = {
+                                                  try {
+                                                      filePickerLauncher.launch("*/*")
+                                                  } catch (e: Exception) {
+                                                      Toast.makeText(context, "ফাইল সিলেক্টর চালু করা যায়নি।", Toast.LENGTH_SHORT).show()
+                                                  }
+                                              },
+                                              colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
+                                              shape = RoundedCornerShape(12.dp),
+                                              modifier = Modifier.weight(1f)
+                                          ) {
+                                              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                                              Spacer(modifier = Modifier.width(4.dp))
+                                              Text("ফাইল ইম্পোর্ট (.m3u)", color = Color.White, fontSize = 11.sp)
+                                          }
+
+                                          Button(
+                                              onClick = {
+                                                  val updated = settings.copy(
+                                                      iptvEnabled = iptvEnabledInput,
+                                                      iptvPlaylistUrl = iptvPlaylistUrlInput,
+                                                      iptvSecondaryUrl = iptvSecondaryUrlInput,
+                                                      iptvFileContent = iptvFileContentInput,
+                                                      iptvServer1Enabled = iptvServer1EnabledInput,
+                                                      iptvServer2Enabled = iptvServer2EnabledInput
+                                                  )
+                                                  AppConfigManager.saveSettings(context, updated)
+                                                  settings = updated
+                                                  Toast.makeText(context, "IPTV সেটিংস সফলভাবে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
+                                                  onConfigUpdated()
+                                              },
+                                              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                              shape = RoundedCornerShape(12.dp),
+                                              modifier = Modifier.weight(1f)
+                                          ) {
+                                              Text("সেটিংস সেভ করুন", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp)
+                                          }
+                                      }
+
+                                      Card(
+                                          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                          shape = RoundedCornerShape(12.dp),
+                                          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                          modifier = Modifier.fillMaxWidth()
+                                      ) {
+                                          Column(
+                                              modifier = Modifier.padding(12.dp),
+                                              verticalArrangement = Arrangement.spacedBy(8.dp)
+                                          ) {
+                                              Text(
+                                                  text = "আইপি টিভি (IPTV) সেটআপ করার সম্পূর্ণ গাইড ও নিয়মাবলী:",
+                                                  fontWeight = FontWeight.Bold,
+                                                  color = MaterialTheme.colorScheme.primary,
+                                                  fontSize = 13.sp
+                                              )
+                                              Text(
+                                                  text = "১. কিভাবে লিংক দিয়ে সেটআপ করবেন: 'Primary M3U Playlist URL' বক্সে আপনার আইপি টিভি সার্ভার বা প্রোভাইডারের ডিরেক্ট .m3u এক্সটেনশন লিংকটি বসান এবং নিচে 'সেটিংস সেভ করুন' বাটনে চাপ দিন।\n২. কিভাবে ডিভাইস থেকে ফাইল দিয়ে সেটআপ করবেন: সরাসরি ফাইল ইমপোর্ট করতে 'ফাইল ইম্পোর্ট (.m3u)' লাল বাটনে চাপ দিন। ফাইলটির সমস্ত চ্যানেল অপেক্ষমান তালিকায় লোড হবে। ওখান থেকে আপনার পছন্দের চ্যানেল সিলেক্ট ও ক্যাটাগরি সেট করে 'অ্যাপে পাবলিশ' করুন।\n৩. সার্ভার বন্ধ বা চালু করা: প্লেয়ারের সার্ভার ১ ও সার্ভার ২ আলাদাভাবে সচল বা বন্ধ রাখতে পারবেন সুইচগুলোর মাধ্যমে।",
+                                                  fontSize = 11.sp,
+                                                  lineHeight = 16.sp,
+                                                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                                              )
+                                          }
+                                      }
+                                  }
+                              }
+
+                              // NEW CHANNEL APPROVAL & CATEGORY SELECTION CARD
+                              Card(
+                                  modifier = Modifier.fillMaxWidth(),
+                                  colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                  shape = RoundedCornerShape(20.dp),
+                                  border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                              ) {
+                                  Column(
+                                      modifier = Modifier.padding(16.dp),
+                                      verticalArrangement = Arrangement.spacedBy(12.dp)
+                                  ) {
+                                      Text(
+                                          text = "চ্যানেল এপ্রুভাল ও ক্যাটাগরি সিলেকশন প্যানেল",
+                                          color = MaterialTheme.colorScheme.primary,
+                                          fontSize = 15.sp,
+                                          fontWeight = FontWeight.Bold
+                                      )
+                                      Text(
+                                          text = "লোড করা M3U ফাইলের চ্যানেলগুলো প্লেয়ারে দেখানোর আগে এখান থেকে সিলেক্ট ও ক্যাটাগরি সেট করে পাবলিশ করতে হবে।",
+                                          fontSize = 11.sp,
+                                          color = Color.Gray
+                                      )
+                                      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                                      // Parse pending channels list
+                                      val pendingChannels = remember(iptvPendingFileContentInput) {
+                                          IptvParser.parseM3u(iptvPendingFileContentInput)
+                                      }
+
+                                      if (pendingChannels.isEmpty()) {
+                                          Box(
+                                              modifier = Modifier
+                                                  .fillMaxWidth()
+                                                  .padding(24.dp),
+                                              contentAlignment = Alignment.Center
+                                          ) {
+                                              Text(
+                                                  "কোন অপেক্ষমান চ্যানেল নেই। অনুগ্রহ করে একটি .m3u ফাইল ইম্পোর্ট করুন!",
+                                                  fontSize = 12.sp,
+                                                  color = Color.Gray,
+                                                  textAlign = TextAlign.Center
+                                              )
+                                          }
+                                      } else {
+                                          var searchQuery by remember { mutableStateOf("") }
+                                          val filteredChannels = remember(pendingChannels, searchQuery) {
+                                              pendingChannels.filter {
+                                                  it.name.contains(searchQuery, ignoreCase = true) ||
+                                                  it.group.contains(searchQuery, ignoreCase = true)
+                                              }
+                                          }
+
+                                          // Store selections and category overrides
+                                          val approvedList = remember(pendingChannels) {
+                                              mutableStateListOf<IptvChannel>().apply {
+                                                  addAll(pendingChannels)
+                                              }
+                                          }
+                                          val categoryOverrides = remember(pendingChannels) {
+                                              mutableStateMapOf<String, String>().apply {
+                                                  pendingChannels.forEach { put(it.name, it.group) }
+                                              }
+                                          }
+
+                                          OutlinedTextField(
+                                              value = searchQuery,
+                                              onValueChange = { searchQuery = it },
+                                              label = { Text("চ্যানেল সার্চ করুন...") },
+                                              singleLine = true,
+                                              modifier = Modifier.fillMaxWidth()
+                                          )
+
+                                          Row(
+                                              modifier = Modifier.fillMaxWidth(),
+                                              horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                          ) {
+                                              TextButton(
+                                                  onClick = {
+                                                      approvedList.clear()
+                                                      approvedList.addAll(pendingChannels)
+                                                  }
+                                              ) {
+                                                  Text("সব সিলেক্ট করুন", fontSize = 11.sp)
+                                              }
+                                              TextButton(
+                                                  onClick = {
+                                                      approvedList.clear()
+                                                  }
+                                              ) {
+                                                  Text("সব ডেসিলক্ট করুন", fontSize = 11.sp)
+                                              }
+                                          }
+
+                                          // We show channels using a vertical scroll Box to avoid scroll conflict inside parent
+                                          Box(
+                                              modifier = Modifier
+                                                  .fillMaxWidth()
+                                                  .heightIn(max = 280.dp)
+                                                  .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                                  .background(MaterialTheme.colorScheme.surface)
+                                          ) {
+                                              val listScrollState = rememberScrollState()
+                                              Column(
+                                                  modifier = Modifier
+                                                      .fillMaxSize()
+                                                      .verticalScroll(listScrollState)
+                                                      .padding(8.dp),
+                                                  verticalArrangement = Arrangement.spacedBy(8.dp)
+                                              ) {
+                                                  filteredChannels.forEach { channel ->
+                                                      val isChecked = approvedList.any { it.name == channel.name }
+                                                      Card(
+                                                          modifier = Modifier.fillMaxWidth(),
+                                                          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                                      ) {
+                                                          Row(
+                                                              modifier = Modifier
+                                                                  .fillMaxWidth()
+                                                                  .padding(8.dp),
+                                                              verticalAlignment = Alignment.CenterVertically,
+                                                              horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                          ) {
+                                                              Checkbox(
+                                                                  checked = isChecked,
+                                                                  onCheckedChange = { checked ->
+                                                                      if (checked) {
+                                                                          if (!approvedList.any { it.name == channel.name }) {
+                                                                              approvedList.add(channel)
+                                                                          }
+                                                                      } else {
+                                                                          approvedList.removeAll { it.name == channel.name }
+                                                                      }
+                                                                  }
+                                                              )
+
+                                                              // Channel Logo / Placeholder
+                                                              Box(
+                                                                  modifier = Modifier
+                                                                      .size(32.dp)
+                                                                      .clip(CircleShape)
+                                                                      .background(MaterialTheme.colorScheme.secondaryContainer),
+                                                                  contentAlignment = Alignment.Center
+                                                              ) {
+                                                                  if (channel.logoUrl.isNotBlank()) {
+                                                                      AsyncImage(
+                                                                          model = channel.logoUrl,
+                                                                          contentDescription = null,
+                                                                          modifier = Modifier.fillMaxSize(),
+                                                                          contentScale = ContentScale.Crop
+                                                                      )
+                                                                  } else {
+                                                                      Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
+                                                                  }
+                                                              }
+
+                                                              Column(modifier = Modifier.weight(1f)) {
+                                                                  Text(channel.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                                  Text(channel.streamUrl, fontSize = 10.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                              }
+
+                                                              // Category text box override
+                                                              var catInput by remember(channel.name) {
+                                                                  mutableStateOf(categoryOverrides[channel.name] ?: channel.group)
+                                                              }
+                                                              OutlinedTextField(
+                                                                  value = catInput,
+                                                                  onValueChange = {
+                                                                      catInput = it
+                                                                      categoryOverrides[channel.name] = it
+                                                                  },
+                                                                  label = { Text("Category", fontSize = 8.sp) },
+                                                                  singleLine = true,
+                                                                  modifier = Modifier.width(100.dp),
+                                                                  textStyle = LocalTextStyle.current.copy(fontSize = 11.sp)
+                                                              )
+                                                          }
+                                                      }
+                                                  }
+                                              }
+                                          }
+
+                                          Spacer(modifier = Modifier.height(8.dp))
+
+                                          Button(
+                                              onClick = {
+                                                  if (approvedList.isEmpty()) {
+                                                      Toast.makeText(context, "কোন চ্যানেল সিলেক্ট করা হয়নি!", Toast.LENGTH_SHORT).show()
+                                                      return@Button
+                                                  }
+                                                  // Map approved channels to updated categories
+                                                  val finalizedChannels = approvedList.map { ch ->
+                                                      val overriddenCat = categoryOverrides[ch.name] ?: ch.group
+                                                      ch.copy(group = overriddenCat.ifBlank { "All" })
+                                                  }
+                                                  // Serialize back to M3U format
+                                                  val serializedM3u = serializeChannelsToM3u(finalizedChannels)
+                                                  // Save into active M3U file settings
+                                                  iptvFileContentInput = serializedM3u
+                                                  val updated = settings.copy(
+                                                      iptvFileContent = serializedM3u
+                                                  )
+                                                  AppConfigManager.saveSettings(context, updated)
+                                                  settings = updated
+                                                  Toast.makeText(context, "${finalizedChannels.size} টি চ্যানেল সফলভাবে ক্যাটাগরিসহ পাবলিশ হয়েছে!", Toast.LENGTH_LONG).show()
+                                                  onConfigUpdated()
+                                              },
+                                              modifier = Modifier.fillMaxWidth(),
+                                              colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                                          ) {
+                                              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                  Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                                                  Text("সিলেক্ট করা চ্যানেলগুলো অ্যাপে পাবলিশ করুন", color = Color.White)
+                                              }
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
 
                     3 -> {
                         // DONATION & ACTIVE SUBSCRIPTIONS MANAGEMENT
@@ -2026,6 +2307,465 @@ fun AdminScreen(
                             }
                         }
                     }
+                    5 -> {
+                        // BROWSER & BOOKMARKS SETTINGS PANEL
+                        val scrollState5 = rememberScrollState()
+                        var newBookmarkName by remember { mutableStateOf("") }
+                        var newBookmarkUrl by remember { mutableStateOf("") }
+                        var newBookmarkType by remember { mutableStateOf("LETTER") }
+                        var newBookmarkLabel by remember { mutableStateOf("") }
+                        var newBookmarkColor by remember { mutableStateOf("#95D5B2") }
+
+                        val shortcutsList = remember(settings.browserShortcutsJson) {
+                            AppConfigManager.parseShortcuts(settings.browserShortcutsJson)
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState5)
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Section: Ad Connection Status & Simulation Feedback
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                                shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "📡 Ad Network Connection Panel (বিজ্ঞাপন সংযোগ প্যানেল)",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "এখানে আপনার বিজ্ঞাপন নেটওয়ার্কের কানেকশন স্ট্যাটাস চেক করুন।",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+                                    // StartApp Indicator
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text("StartApp Ad Network", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("App ID: ${if(settings.startappAppId.isBlank()) "সেট করা নেই" else settings.startappAppId}", fontSize = 10.sp, color = Color.Gray)
+                                        }
+                                        Surface(
+                                            color = if (settings.startappAppId.isNotBlank()) Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(6.dp)
+                                                        .background(if (settings.startappAppId.isNotBlank()) Color(0xFF4CAF50) else Color(0xFFF44336), CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (settings.startappAppId.isNotBlank()) "কানেক্ট হয়েছে (Active)" else "কানেক্ট হয়নি (Inactive)",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (settings.startappAppId.isNotBlank()) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Monetag Indicator
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text("Monetag Ad Network", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("Zone ID: ${if(settings.monetagAdCode.isBlank()) "সেট করা নেই" else settings.monetagAdCode}", fontSize = 10.sp, color = Color.Gray)
+                                        }
+                                        Surface(
+                                            color = if (settings.monetagAdCode.isNotBlank()) Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(6.dp)
+                                                        .background(if (settings.monetagAdCode.isNotBlank()) Color(0xFF4CAF50) else Color(0xFFF44336), CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (settings.monetagAdCode.isNotBlank()) "কানেক্ট হয়েছে (Active)" else "কানেক্ট হয়নি (Inactive)",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (settings.monetagAdCode.isNotBlank()) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Part A: Browser Enable/Disable Switch
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "ব্রাউজার ও বুকমার্ক সেটিংস",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text("ফাস্ট ব্রাউজার ট্যাব চালু করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text("নিচের নেভিগেশন বারে 'Browser' ট্যাবটি দৃশ্যমান হবে।", fontSize = 11.sp, color = Color.Gray)
+                                        }
+                                        Switch(
+                                            checked = settings.browserEnabled,
+                                            onCheckedChange = { checked ->
+                                                val updated = settings.copy(browserEnabled = checked)
+                                                AppConfigManager.saveSettings(context, updated)
+                                                settings = updated
+                                                Toast.makeText(context, "ব্রাউজার স্ট্যাটাস সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
+                                                onConfigUpdated()
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Part B: Add new bookmark shortcut Form
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "নতুন বুকমার্ক শর্টকাট যুক্ত করুন",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                                    OutlinedTextField(
+                                        value = newBookmarkName,
+                                        onValueChange = { newBookmarkName = it },
+                                        label = { Text("বুকমার্কের নাম (যেমন: Facebook)") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = newBookmarkUrl,
+                                        onValueChange = { newBookmarkUrl = it },
+                                        label = { Text("বুকমার্ক লিংক (যেমন: https://facebook.com)") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = newBookmarkLabel,
+                                        onValueChange = { newBookmarkLabel = it },
+                                        label = { Text("আইকন অক্ষর (LETTER মোডের জন্য যেমন: F)") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    // Type select
+                                    Text("আইকন ডিজাইন ধরণ নির্বাচন করুন:", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    val shortcutTypes = listOf("LETTER", "SWIRL", "DOWNLOAD", "PLAY", "SPEECH")
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        shortcutTypes.forEach { type ->
+                                            val isSelected = newBookmarkType == type
+                                            ElevatedFilterChip(
+                                                selected = isSelected,
+                                                onClick = { newBookmarkType = type },
+                                                label = { Text(type, fontSize = 10.sp) }
+                                            )
+                                        }
+                                    }
+
+                                    // Color selector
+                                    Text("আইকনের ব্যাকগ্রাউন্ড কালার হেক্স কোড:", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    OutlinedTextField(
+                                        value = newBookmarkColor,
+                                        onValueChange = { newBookmarkColor = it },
+                                        label = { Text("কালার হেক্স কোড (যেমন: #95D5B2)") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            if (newBookmarkName.isBlank() || newBookmarkUrl.isBlank()) {
+                                                Toast.makeText(context, "বুকমার্কের নাম ও লিংক অবশ্যই দিতে হবে।", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            val currentList = shortcutsList.toMutableList()
+                                            currentList.add(
+                                                BrowserShortcut(
+                                                    name = newBookmarkName,
+                                                    url = newBookmarkUrl,
+                                                    colorHex = newBookmarkColor.ifBlank { "#95D5B2" },
+                                                    type = newBookmarkType,
+                                                    label = newBookmarkLabel.ifBlank { newBookmarkName.take(1).uppercase() }
+                                                )
+                                            )
+                                            val updatedJson = AppConfigManager.serializeShortcuts(currentList)
+                                            val updated = settings.copy(browserShortcutsJson = updatedJson)
+                                            AppConfigManager.saveSettings(context, updated)
+                                            settings = updated
+                                            newBookmarkName = ""
+                                            newBookmarkUrl = ""
+                                            newBookmarkLabel = ""
+                                            Toast.makeText(context, "নতুন বুকমার্ক সফলভাবে সংরক্ষণ করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                                            onConfigUpdated()
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                    ) {
+                                        Text("বুকমার্ক যোগ করুন", color = Color.White)
+                                    }
+                                }
+                            }
+
+                            // Part C: List existing custom bookmarks
+                            Text("বিদ্যমান বুকমার্ক তালিকা:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            if (shortcutsList.isEmpty()) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Text(
+                                        text = "কোন কাস্টম বুকমার্ক যোগ করা হয়নি। ডিফল্ট ১২টি শর্টকাট ব্রাউজারে প্রদর্শিত হচ্ছে।",
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(16.dp),
+                                        color = Color.Gray,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            } else {
+                                shortcutsList.forEach { shortcut ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(try { Color(android.graphics.Color.parseColor(shortcut.colorHex)) } catch(e: Exception) { Color.Gray }),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(shortcut.label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                }
+                                                Column {
+                                                    Text(shortcut.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                                    Text(shortcut.url, fontSize = 10.sp, color = Color.Gray)
+                                                }
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    val currentList = shortcutsList.toMutableList()
+                                                    currentList.remove(shortcut)
+                                                    val updatedJson = AppConfigManager.serializeShortcuts(currentList)
+                                                    val updated = settings.copy(browserShortcutsJson = updatedJson)
+                                                    AppConfigManager.saveSettings(context, updated)
+                                                    settings = updated
+                                                    Toast.makeText(context, "বুকমার্ক মুছে ফেলা হয়েছে।", Toast.LENGTH_SHORT).show()
+                                                    onConfigUpdated()
+                                                }
+                                            ) {
+                                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    6 -> {
+                        // NEW ADVANCED ADS MANAGER DASHBOARD
+                        val scrollState = rememberScrollState()
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            val isWide = maxWidth > 650.dp
+                            if (isWide) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .verticalScroll(rememberScrollState()),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        AdPanelLeftContent(
+                                            personalAdEnabled = personalAdEnabledInput,
+                                            onPersonalAdEnabledChange = { personalAdEnabledInput = it },
+                                            personalAdImageUrl = personalAdImageUrlInput,
+                                            onPersonalAdImageUrlChange = { personalAdImageUrlInput = it },
+                                            personalAdClickUrl = personalAdClickUrlInput,
+                                            onPersonalAdClickChange = { personalAdClickUrlInput = it },
+                                            personalAdVideoUrl = personalAdVideoUrlInput,
+                                            onPersonalAdVideoChange = { personalAdVideoUrlInput = it }
+                                        )
+                                    }
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .verticalScroll(rememberScrollState()),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        AdPanelRightContent(
+                                            context = context,
+                                            settings = settings,
+                                            adsEnabled = adsEnabledInput,
+                                            onAdsEnabledChange = { adsEnabledInput = it },
+                                            backAdEnabled = backAdEnabledInput,
+                                            onBackAdEnabledChange = { backAdEnabledInput = it },
+                                            activeNetwork = settings.adNetwork,
+                                            onNetworkChange = { net ->
+                                                val updated = settings.copy(adNetwork = net)
+                                                AppConfigManager.saveSettings(context, updated)
+                                                settings = updated
+                                                onConfigUpdated()
+                                            },
+                                            monetagAdCode = monetagAdCodeInput,
+                                            onMonetagAdCodeChange = { monetagAdCodeInput = it },
+                                            startappAppId = startappAppIdInput,
+                                            onStartappAppIdChange = { startappAppIdInput = it },
+                                            onSave = {
+                                                val updated = settings.copy(
+                                                    adsEnabled = adsEnabledInput,
+                                                    backAdEnabled = backAdEnabledInput,
+                                                    personalAdEnabled = personalAdEnabledInput,
+                                                    personalAdImageUrl = personalAdImageUrlInput,
+                                                    personalAdClickUrl = personalAdClickUrlInput,
+                                                    personalAdVideoUrl = personalAdVideoUrlInput,
+                                                    monetagAdCode = monetagAdCodeInput,
+                                                    startappAppId = startappAppIdInput
+                                                )
+                                                AppConfigManager.saveSettings(context, updated)
+                                                settings = updated
+                                                Toast.makeText(context, "বিজ্ঞাপন সেটিংস সংরক্ষণ ও কানেক্ট হয়েছে!", Toast.LENGTH_SHORT).show()
+                                                onConfigUpdated()
+                                            }
+                                        )
+                                    }
+                                }
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(scrollState)
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    AdPanelLeftContent(
+                                        personalAdEnabled = personalAdEnabledInput,
+                                        onPersonalAdEnabledChange = { personalAdEnabledInput = it },
+                                        personalAdImageUrl = personalAdImageUrlInput,
+                                        onPersonalAdImageUrlChange = { personalAdImageUrlInput = it },
+                                        personalAdClickUrl = personalAdClickUrlInput,
+                                        onPersonalAdClickChange = { personalAdClickUrlInput = it },
+                                        personalAdVideoUrl = personalAdVideoUrlInput,
+                                        onPersonalAdVideoChange = { personalAdVideoUrlInput = it }
+                                    )
+                                    AdPanelRightContent(
+                                        context = context,
+                                        settings = settings,
+                                        adsEnabled = adsEnabledInput,
+                                        onAdsEnabledChange = { adsEnabledInput = it },
+                                        backAdEnabled = backAdEnabledInput,
+                                        onBackAdEnabledChange = { backAdEnabledInput = it },
+                                        activeNetwork = settings.adNetwork,
+                                        onNetworkChange = { net ->
+                                            val updated = settings.copy(adNetwork = net)
+                                            AppConfigManager.saveSettings(context, updated)
+                                            settings = updated
+                                            onConfigUpdated()
+                                        },
+                                        monetagAdCode = monetagAdCodeInput,
+                                        onMonetagAdCodeChange = { monetagAdCodeInput = it },
+                                        startappAppId = startappAppIdInput,
+                                        onStartappAppIdChange = { startappAppIdInput = it },
+                                        onSave = {
+                                            val updated = settings.copy(
+                                                adsEnabled = adsEnabledInput,
+                                                backAdEnabled = backAdEnabledInput,
+                                                personalAdEnabled = personalAdEnabledInput,
+                                                personalAdImageUrl = personalAdImageUrlInput,
+                                                personalAdClickUrl = personalAdClickUrlInput,
+                                                personalAdVideoUrl = personalAdVideoUrlInput,
+                                                monetagAdCode = monetagAdCodeInput,
+                                                startappAppId = startappAppIdInput
+                                            )
+                                            AppConfigManager.saveSettings(context, updated)
+                                            settings = updated
+                                            Toast.makeText(context, "বিজ্ঞাপন সেটিংস সংরক্ষণ ও কানেক্ট হয়েছে!", Toast.LENGTH_SHORT).show()
+                                            onConfigUpdated()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                 }
             }
         }
@@ -2196,5 +2936,347 @@ fun AdminScreen(
                 }
             }
         )
+    }
+}
+
+// Helper function to serialize selected channels to M3U
+fun serializeChannelsToM3u(channels: List<IptvChannel>): String {
+    val sb = StringBuilder()
+    sb.append("#EXTM3U\n")
+    for (ch in channels) {
+        sb.append("#EXTINF:-1 tvg-logo=\"${ch.logoUrl}\" group-title=\"${ch.group}\",${ch.name}\n")
+        sb.append("${ch.streamUrl}\n")
+    }
+    return sb.toString()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdPanelLeftContent(
+    personalAdEnabled: Boolean,
+    onPersonalAdEnabledChange: (Boolean) -> Unit,
+    personalAdImageUrl: String,
+    onPersonalAdImageUrlChange: (String) -> Unit,
+    personalAdClickUrl: String,
+    onPersonalAdClickChange: (String) -> Unit,
+    personalAdVideoUrl: String,
+    onPersonalAdVideoChange: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "ব্যক্তিগত বিজ্ঞাপন ও ফাইল সেটিংস (Personal Ads)",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("ব্যক্তিগত বিজ্ঞাপন দেখান (Personal Ads)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("নেটওয়ার্ক বিজ্ঞাপনের জায়গায় নিজের ব্যানার ও ভিডিও অ্যাড দেখান", fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(
+                    checked = personalAdEnabled,
+                    onCheckedChange = onPersonalAdEnabledChange
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            OutlinedTextField(
+                value = personalAdImageUrl,
+                onValueChange = onPersonalAdImageUrlChange,
+                label = { Text("ব্যক্তিগত বিজ্ঞাপন ব্যানার ইমেজ URL (পিকচার ফাইল)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("https://example.com/ad-image.png") }
+            )
+
+            OutlinedTextField(
+                value = personalAdClickUrl,
+                onValueChange = onPersonalAdClickChange,
+                label = { Text("বিজ্ঞাপনে ক্লিক করলে যে লিংকে নিয়ে যাবে (Redirect URL)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("https://my-website.com") }
+            )
+
+            OutlinedTextField(
+                value = personalAdVideoUrl,
+                onValueChange = onPersonalAdVideoChange,
+                label = { Text("ব্যক্তিগত ভিডিও বিজ্ঞাপনের MP4 URL (অপশনাল)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("https://example.com/video-ad.mp4") }
+            )
+
+            if (personalAdImageUrl.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("বিজ্ঞাপন ব্যানার প্রিভিউ (Ad Preview):", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        AsyncImage(
+                            model = personalAdImageUrl,
+                            contentDescription = "Ad Preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdPanelRightContent(
+    context: android.content.Context,
+    settings: com.example.data.AppSettings,
+    adsEnabled: Boolean,
+    onAdsEnabledChange: (Boolean) -> Unit,
+    backAdEnabled: Boolean,
+    onBackAdEnabledChange: (Boolean) -> Unit,
+    activeNetwork: String,
+    onNetworkChange: (String) -> Unit,
+    monetagAdCode: String,
+    onMonetagAdCodeChange: (String) -> Unit,
+    startappAppId: String,
+    onStartappAppIdChange: (String) -> Unit,
+    onSave: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "নেটওয়ার্ক আইডি ও লাইভ কানেকশন স্ট্যাটাস",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("বিজ্ঞাপন দেখান (Enable Global Ads)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("অ্যাপের সকল জায়গায় বিজ্ঞাপন লোডিং সচল রাখুন", fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(
+                    checked = adsEnabled,
+                    onCheckedChange = onAdsEnabledChange
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("ব্যাক বাটনে বিজ্ঞাপন দেখান", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("ভিডিও প্লেয়ার থেকে ব্যাক করলে বিজ্ঞাপন দেখাবে", fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(
+                    checked = backAdEnabled,
+                    onCheckedChange = onBackAdEnabledChange
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text("অ্যাক্টিভ বিজ্ঞাপন নেটওয়ার্ক নির্বাচন করুন (Active Network):", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.Gray)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("monetag", "startapp").forEach { net ->
+                    val isSelected = activeNetwork == net
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onNetworkChange(net) },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Text(
+                            text = net.uppercase(),
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            OutlinedTextField(
+                value = monetagAdCode,
+                onValueChange = onMonetagAdCodeChange,
+                label = { Text("Monetag Ad Placement Code / Tag ID") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("e.g. 1234567") }
+            )
+
+            OutlinedTextField(
+                value = startappAppId,
+                onValueChange = onStartappAppIdChange,
+                label = { Text("StartApp SDK App ID") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("e.g. 204561722") }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text("লাইভ বিজ্ঞাপন কানেকশন ট্র্যাকার (Ad Sync Live Tracker):", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val isMonetagConnected = monetagAdCode.isNotBlank() && adsEnabled
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Monetag Connection Status", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(if (isMonetagConnected) Color(0xFF00E676) else Color(0xFFFF1744), CircleShape)
+                            )
+                            Text(
+                                text = if (isMonetagConnected) "কানেক্ট হয়েছে (CONNECTED)" else "কানেক্ট হয়নি (OFF)",
+                                fontSize = 11.sp,
+                                color = if (isMonetagConnected) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    val isStartAppConnected = startappAppId.isNotBlank() && adsEnabled
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("StartApp Connection Status", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(if (isStartAppConnected) Color(0xFF00E676) else Color(0xFFFF1744), CircleShape)
+                            )
+                            Text(
+                                text = if (isStartAppConnected) "কানেক্ট হয়েছে (CONNECTED)" else "কানেক্ট হয়নি (OFF)",
+                                fontSize = 11.sp,
+                                color = if (isStartAppConnected) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    val isPersonalConnected = settings.personalAdEnabled && settings.personalAdImageUrl.isNotBlank()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Personal Campaign Status", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(if (isPersonalConnected) Color(0xFF00E676) else Color(0xFF757575), CircleShape)
+                            )
+                            Text(
+                                text = if (isPersonalConnected) "ক্যাম্পেইন সচল (ACTIVE)" else "বন্ধ রয়েছে (INACTIVE)",
+                                fontSize = 11.sp,
+                                color = if (isPersonalConnected) Color(0xFF2E7D32) else Color(0xFF757575),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(imageVector = Icons.Default.Send, contentDescription = null, tint = Color.White)
+                    Text("সেভ এবং বিজ্ঞাপন কানেক্ট করুন", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }

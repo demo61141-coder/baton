@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -43,6 +44,13 @@ fun VideoAdOverlay(
     var secondsRemaining by remember { mutableStateOf(5) }
     var isSkipEnabled by remember { mutableStateOf(false) }
     var videoProgress by remember { mutableStateOf(0f) }
+
+    // Prevent back press from exiting the app while video ad is active
+    BackHandler {
+        if (isSkipEnabled) {
+            onAdDismissed()
+        }
+    }
 
     val isPersonalAd = appSettings?.personalAdEnabled == true
 

@@ -11,9 +11,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -48,9 +50,20 @@ fun WebViewScreen(
     var isLoading by remember { mutableStateOf(true) }
     var progressVal by remember { mutableStateOf(0) }
 
+    val isIptv = remember(url) {
+        url.contains(".m3u8", ignoreCase = true) ||
+        url.contains(".ts", ignoreCase = true) ||
+        url.contains(".mp4", ignoreCase = true) ||
+        url.contains(".m3u", ignoreCase = true) ||
+        url.contains("stream", ignoreCase = true) ||
+        url.contains("live", ignoreCase = true) ||
+        url.contains("rtmp", ignoreCase = true) ||
+        url.contains("rtsp", ignoreCase = true)
+    }
+
     // Intercept hardware/system back button
     BackHandler {
-        if (webViewInstance?.canGoBack() == true) {
+        if (!isIptv && webViewInstance?.canGoBack() == true) {
             webViewInstance?.goBack()
         } else {
             // Trigger Back Ad before exit if enabled
@@ -70,7 +83,7 @@ fun WebViewScreen(
                 title = {
                     Column {
                         Text(
-                            text = currentTitle,
+                            text = if (isIptv) title else currentTitle,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -78,19 +91,48 @@ fun WebViewScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = currentUrl,
-                            fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.5f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (isIptv) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(Color(0xFFFF1744), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "🔴 সরাসরি সম্প্রচার (LIVE STREAMING)",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFFF1744),
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Secure Link",
+                                    tint = Color(0xFF00FF87),
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = "🔒 নিরাপদ লাইভ সার্ভার সংযুক্ত (Secure Link Connected)",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF00FF87),
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            if (webViewInstance?.canGoBack() == true) {
+                            if (!isIptv && webViewInstance?.canGoBack() == true) {
                                 webViewInstance?.goBack()
                             } else {
                                 if (adsEnabled && backAdEnabled) {

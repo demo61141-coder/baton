@@ -78,6 +78,9 @@ data class AppSettings(
     val iptvPlaylistUrl: String = "https://raw.githubusercontent.com/Fribb/iptv-channels/master/iptv/playlists/playlist_singapore.m3u",
     val iptvSecondaryUrl: String = "https://iptv-org.github.io/iptv/categories/news.m3u",
     val iptvFileContent: String = "", // raw M3U channels string or pasted channels
+    val iptvServer1Enabled: Boolean = true,
+    val iptvServer2Enabled: Boolean = true,
+    val iptvPendingFileContent: String = "", // M3U content loaded for admin preview before active
 
     // Three dot config
     val showThreeDotAdDelaySeconds: Int = 5,
