@@ -102,17 +102,15 @@ fun HomeScreen(
         // Step 1: Instantly load cached configurations so home screen opens without any hanging
         reloadAll()
 
-        // Step 2: Fetch and sync with Google Sheets asynchronously in the background
-        if (settings.sheetId.isNotBlank()) {
-            coroutineScope.launch {
-                try {
-                    val success = GoogleSheetsManager.fetchAndSyncConfig(context, settings.sheetId)
-                    if (success) {
-                        reloadAll()
-                    }
-                } catch (e: Exception) {
-                    // Fail silently to keep the experience completely seamless and offline-first
+        // Step 2: Fetch and sync with GitHub first (falls back to local storage sheet ID if unreachable)
+        coroutineScope.launch {
+            try {
+                val success = GitHubConfigManager.fetchAndSyncWithGitHub(context)
+                if (success) {
+                    reloadAll()
                 }
+            } catch (e: Exception) {
+                // Fail silently to keep the experience completely seamless and offline-first
             }
         }
     }
@@ -183,7 +181,7 @@ fun HomeScreen(
                         onClick = {
                             isRefreshing = true
                             coroutineScope.launch {
-                                val success = GoogleSheetsManager.fetchAndSyncConfig(context, settings.sheetId)
+                                val success = GitHubConfigManager.fetchAndSyncWithGitHub(context)
                                 isRefreshing = false
                                 if (success) {
                                     Toast.makeText(context, "Streams updated from Cloud!", Toast.LENGTH_SHORT).show()

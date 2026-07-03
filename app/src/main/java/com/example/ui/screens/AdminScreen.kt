@@ -78,6 +78,8 @@ fun AdminScreen(
     // Sync state
     var isSyncing by remember { mutableStateOf(false) }
     var inputSheetId by remember { mutableStateOf(settings.sheetId) }
+    var inputGithubConfigUrl by remember { mutableStateOf(settings.githubConfigUrl) }
+    var isGithubRefreshing by remember { mutableStateOf(false) }
 
     // Broadcast messages inputs
     var notifyTitle by remember { mutableStateOf("") }
@@ -207,6 +209,8 @@ fun AdminScreen(
         iptvServer1EnabledInput = settings.iptvServer1Enabled
         iptvServer2EnabledInput = settings.iptvServer2Enabled
         iptvPendingFileContentInput = settings.iptvPendingFileContent
+        inputSheetId = settings.sheetId
+        inputGithubConfigUrl = settings.githubConfigUrl
     }
 
     Scaffold(
@@ -628,6 +632,133 @@ fun AdminScreen(
                                     }
                                 }
                             }
+
+                            // Section: GitHub Remote Config Setup
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "GitHub Remote Config Setup",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                                    Text(
+                                        text = "কোডে গুগল শিট আইডি সরাসরি হার্ডকোড না রেখে গিটহাব থেকে ডাইনামিকালি লোড করা হচ্ছে। নিচে আপনার গিটহাব config.json ফাইলের Raw URL প্রদান করুন।",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    OutlinedTextField(
+                                        value = inputGithubConfigUrl,
+                                        onValueChange = { inputGithubConfigUrl = it },
+                                        label = { Text("GitHub Raw config.json URL") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                if (inputGithubConfigUrl.isBlank()) {
+                                                    Toast.makeText(context, "GitHub URL is required", Toast.LENGTH_SHORT).show()
+                                                    return@Button
+                                                }
+                                                val updatedS = settings.copy(githubConfigUrl = inputGithubConfigUrl.trim())
+                                                AppConfigManager.saveSettings(context, updatedS)
+                                                refreshAll()
+                                                onConfigUpdated()
+                                                Toast.makeText(context, "গিটহাব লিঙ্ক সফলভাবে সেভ করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.Done, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("লিঙ্ক সেভ করুন", fontSize = 12.sp)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                if (inputGithubConfigUrl.isBlank()) {
+                                                    Toast.makeText(context, "GitHub URL is required", Toast.LENGTH_SHORT).show()
+                                                    return@Button
+                                                }
+                                                isGithubRefreshing = true
+                                                coroutineScope.launch {
+                                                    // First, save the URL
+                                                    val savedSettings = settings.copy(githubConfigUrl = inputGithubConfigUrl.trim())
+                                                    AppConfigManager.saveSettings(context, savedSettings)
+                                                    
+                                                    // Then, force sync
+                                                    val success = GitHubConfigManager.fetchAndSyncWithGitHub(context, inputGithubConfigUrl.trim())
+                                                    isGithubRefreshing = false
+                                                    if (success) {
+                                                        Toast.makeText(context, "GitHub config লোড হয়েছে এবং গুগল শিট সফলভাবে সিঙ্ক হয়েছে!", Toast.LENGTH_LONG).show()
+                                                        refreshAll()
+                                                        onConfigUpdated()
+                                                    } else {
+                                                        Toast.makeText(context, "গিটহাব বা গুগল শিট সিঙ্ক ব্যর্থ হয়েছে। লিঙ্ক ও ইন্টারনেট চেক করুন।", Toast.LENGTH_LONG).show()
+                                                    }
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.weight(1f),
+                                            enabled = !isGithubRefreshing
+                                        ) {
+                                            if (isGithubRefreshing) {
+                                                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
+                                            } else {
+                                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Force Refresh", fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
+
+                                    // Display current Spreadsheet ID info
+                                    if (settings.sheetId.isNotBlank()) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column(modifier = Modifier.padding(12.dp)) {
+                                                Text(
+                                                    text = "সক্রিয় গুগল স্প্রেডশিট আইডি (Active Sheet ID):",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = settings.sheetId,
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             // Section: Cloud Spreadsheet ID & Connect Guide
                             Card(
@@ -1475,53 +1606,93 @@ fun AdminScreen(
                                       )
                                       HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                                      // Parse pending channels list
-                                      val pendingChannels = remember(iptvPendingFileContentInput) {
-                                          IptvParser.parseM3u(iptvPendingFileContentInput)
+                                      // Managed channels list state
+                                      val managedChannels = remember(iptvPendingFileContentInput, iptvFileContentInput) {
+                                          val list = mutableStateListOf<IptvChannel>()
+                                          if (iptvPendingFileContentInput.isNotBlank()) {
+                                              list.addAll(IptvParser.parseM3u(iptvPendingFileContentInput))
+                                          } else if (iptvFileContentInput.isNotBlank()) {
+                                              list.addAll(IptvParser.parseM3u(iptvFileContentInput))
+                                          }
+                                          list
                                       }
 
-                                      if (pendingChannels.isEmpty()) {
+                                      // Selected stream URLs for active publishing status
+                                      val selectedUrls = remember(managedChannels) {
+                                          val urls = mutableStateListOf<String>()
+                                          urls.addAll(managedChannels.map { it.streamUrl })
+                                          urls
+                                      }
+
+                                      var searchQuery by remember { mutableStateOf("") }
+                                      var showAddChannelDialog by remember { mutableStateOf(false) }
+
+                                      // Form states for manual channel addition
+                                      var newChannelName by remember { mutableStateOf("") }
+                                      var newChannelUrl by remember { mutableStateOf("") }
+                                      var newChannelCat by remember { mutableStateOf("All") }
+                                      var newChannelLogo by remember { mutableStateOf("") }
+
+                                      if (managedChannels.isEmpty()) {
                                           Box(
                                               modifier = Modifier
                                                   .fillMaxWidth()
                                                   .padding(24.dp),
                                               contentAlignment = Alignment.Center
                                           ) {
-                                              Text(
-                                                  "কোন অপেক্ষমান চ্যানেল নেই। অনুগ্রহ করে একটি .m3u ফাইল ইম্পোর্ট করুন!",
-                                                  fontSize = 12.sp,
-                                                  color = Color.Gray,
-                                                  textAlign = TextAlign.Center
-                                              )
+                                              Column(
+                                                  horizontalAlignment = Alignment.CenterHorizontally,
+                                                  verticalArrangement = Arrangement.spacedBy(8.dp)
+                                              ) {
+                                                  Text(
+                                                      "কোন অপেক্ষমান বা পাবলিশড চ্যানেল নেই। অনুগ্রহ করে একটি .m3u ফাইল ইম্পোর্ট করুন অথবা নিচে ম্যানুয়ালি চ্যানেল যোগ করুন!",
+                                                      fontSize = 12.sp,
+                                                      color = Color.Gray,
+                                                      textAlign = TextAlign.Center
+                                                  )
+                                                  Button(
+                                                      onClick = { showAddChannelDialog = true },
+                                                      colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                                  ) {
+                                                      Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                      Spacer(modifier = Modifier.width(4.dp))
+                                                      Text("ম্যানুয়ালি চ্যানেল যোগ করুন", fontSize = 11.sp)
+                                                  }
+                                              }
                                           }
                                       } else {
-                                          var searchQuery by remember { mutableStateOf("") }
-                                          val filteredChannels = remember(pendingChannels, searchQuery) {
-                                              pendingChannels.filter {
-                                                  it.name.contains(searchQuery, ignoreCase = true) ||
-                                                  it.group.contains(searchQuery, ignoreCase = true)
-                                              }
-                                          }
-
-                                          // Store selections and category overrides
-                                          val approvedList = remember(pendingChannels) {
-                                              mutableStateListOf<IptvChannel>().apply {
-                                                  addAll(pendingChannels)
-                                              }
-                                          }
-                                          val categoryOverrides = remember(pendingChannels) {
-                                              mutableStateMapOf<String, String>().apply {
-                                                  pendingChannels.forEach { put(it.name, it.group) }
-                                              }
-                                          }
-
                                           OutlinedTextField(
                                               value = searchQuery,
                                               onValueChange = { searchQuery = it },
                                               label = { Text("চ্যানেল সার্চ করুন...") },
+                                              leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                               singleLine = true,
                                               modifier = Modifier.fillMaxWidth()
                                           )
+
+                                          Row(
+                                              modifier = Modifier.fillMaxWidth(),
+                                              horizontalArrangement = Arrangement.SpaceBetween,
+                                              verticalAlignment = Alignment.CenterVertically
+                                          ) {
+                                              Text(
+                                                  text = "চ্যানেল সংখ্যা: ${managedChannels.size} | সিলেক্টেড: ${selectedUrls.size}",
+                                                  fontSize = 12.sp,
+                                                  fontWeight = FontWeight.Bold,
+                                                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                                              )
+                                              Button(
+                                                  onClick = { showAddChannelDialog = true },
+                                                  colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                                  shape = RoundedCornerShape(8.dp),
+                                                  contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                                  modifier = Modifier.height(32.dp)
+                                              ) {
+                                                  Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                  Spacer(modifier = Modifier.width(2.dp))
+                                                  Text("ম্যানুয়াল চ্যানেল যোগ", fontSize = 10.sp)
+                                              }
+                                          }
 
                                           Row(
                                               modifier = Modifier.fillMaxWidth(),
@@ -1529,18 +1700,37 @@ fun AdminScreen(
                                           ) {
                                               TextButton(
                                                   onClick = {
-                                                      approvedList.clear()
-                                                      approvedList.addAll(pendingChannels)
-                                                  }
+                                                      selectedUrls.clear()
+                                                      selectedUrls.addAll(managedChannels.map { it.streamUrl })
+                                                  },
+                                                  modifier = Modifier.weight(1f)
                                               ) {
                                                   Text("সব সিলেক্ট করুন", fontSize = 11.sp)
                                               }
                                               TextButton(
                                                   onClick = {
-                                                      approvedList.clear()
-                                                  }
+                                                      selectedUrls.clear()
+                                                  },
+                                                  modifier = Modifier.weight(1f)
                                               ) {
                                                   Text("সব ডেসিলক্ট করুন", fontSize = 11.sp)
+                                              }
+                                              TextButton(
+                                                  onClick = {
+                                                      managedChannels.clear()
+                                                      selectedUrls.clear()
+                                                  },
+                                                  modifier = Modifier.weight(1f),
+                                                  colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                              ) {
+                                                  Text("সব ডিলিট করুন", fontSize = 11.sp)
+                                              }
+                                          }
+
+                                          val filteredChannels = remember(managedChannels, searchQuery) {
+                                              managedChannels.filter {
+                                                  it.name.contains(searchQuery, ignoreCase = true) ||
+                                                  it.group.contains(searchQuery, ignoreCase = true)
                                               }
                                           }
 
@@ -1561,71 +1751,114 @@ fun AdminScreen(
                                                   verticalArrangement = Arrangement.spacedBy(8.dp)
                                               ) {
                                                   filteredChannels.forEach { channel ->
-                                                      val isChecked = approvedList.any { it.name == channel.name }
+                                                      val isChecked = selectedUrls.contains(channel.streamUrl)
                                                       Card(
                                                           modifier = Modifier.fillMaxWidth(),
                                                           colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                                       ) {
-                                                          Row(
+                                                          Column(
                                                               modifier = Modifier
                                                                   .fillMaxWidth()
                                                                   .padding(8.dp),
-                                                              verticalAlignment = Alignment.CenterVertically,
-                                                              horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                              verticalArrangement = Arrangement.spacedBy(8.dp)
                                                           ) {
-                                                              Checkbox(
-                                                                  checked = isChecked,
-                                                                  onCheckedChange = { checked ->
-                                                                      if (checked) {
-                                                                          if (!approvedList.any { it.name == channel.name }) {
-                                                                              approvedList.add(channel)
+                                                              Row(
+                                                                  modifier = Modifier.fillMaxWidth(),
+                                                                  verticalAlignment = Alignment.CenterVertically,
+                                                                  horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                              ) {
+                                                                  Checkbox(
+                                                                      checked = isChecked,
+                                                                      onCheckedChange = { checked ->
+                                                                          if (checked) {
+                                                                              if (!selectedUrls.contains(channel.streamUrl)) {
+                                                                                  selectedUrls.add(channel.streamUrl)
+                                                                              }
+                                                                          } else {
+                                                                              selectedUrls.remove(channel.streamUrl)
                                                                           }
+                                                                      }
+                                                                  )
+
+                                                                  Box(
+                                                                      modifier = Modifier
+                                                                          .size(36.dp)
+                                                                          .clip(CircleShape)
+                                                                          .background(MaterialTheme.colorScheme.secondaryContainer),
+                                                                      contentAlignment = Alignment.Center
+                                                                  ) {
+                                                                      if (channel.logoUrl.isNotBlank()) {
+                                                                          AsyncImage(
+                                                                              model = channel.logoUrl,
+                                                                              contentDescription = null,
+                                                                              modifier = Modifier.fillMaxSize(),
+                                                                              contentScale = ContentScale.Crop
+                                                                          )
                                                                       } else {
-                                                                          approvedList.removeAll { it.name == channel.name }
+                                                                          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
                                                                       }
                                                                   }
-                                                              )
 
-                                                              // Channel Logo / Placeholder
-                                                              Box(
-                                                                  modifier = Modifier
-                                                                      .size(32.dp)
-                                                                      .clip(CircleShape)
-                                                                      .background(MaterialTheme.colorScheme.secondaryContainer),
-                                                                  contentAlignment = Alignment.Center
-                                                              ) {
-                                                                  if (channel.logoUrl.isNotBlank()) {
-                                                                      AsyncImage(
-                                                                          model = channel.logoUrl,
-                                                                          contentDescription = null,
-                                                                          modifier = Modifier.fillMaxSize(),
-                                                                          contentScale = ContentScale.Crop
+                                                                  // Editable Name Field
+                                                                  OutlinedTextField(
+                                                                      value = channel.name,
+                                                                      onValueChange = { newName ->
+                                                                          val idx = managedChannels.indexOf(channel)
+                                                                          if (idx != -1) {
+                                                                              managedChannels[idx] = channel.copy(name = newName)
+                                                                          }
+                                                                      },
+                                                                      label = { Text("চ্যানেলের নাম", fontSize = 9.sp) },
+                                                                      singleLine = true,
+                                                                      modifier = Modifier.weight(1f),
+                                                                      textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                                  )
+
+                                                                  // Delete Button
+                                                                  IconButton(
+                                                                      onClick = {
+                                                                          managedChannels.remove(channel)
+                                                                          selectedUrls.remove(channel.streamUrl)
+                                                                      }
+                                                                  ) {
+                                                                      Icon(
+                                                                          imageVector = Icons.Default.Delete,
+                                                                          contentDescription = "Delete",
+                                                                          tint = MaterialTheme.colorScheme.error
                                                                       )
-                                                                  } else {
-                                                                      Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
                                                                   }
                                                               }
 
-                                                              Column(modifier = Modifier.weight(1f)) {
-                                                                  Text(channel.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                                  Text(channel.streamUrl, fontSize = 10.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                              }
+                                                              Row(
+                                                                  modifier = Modifier.fillMaxWidth().padding(start = 44.dp),
+                                                                  verticalAlignment = Alignment.CenterVertically,
+                                                                  horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                              ) {
+                                                                  // Editable Category Field
+                                                                  OutlinedTextField(
+                                                                      value = channel.group,
+                                                                      onValueChange = { newGroup ->
+                                                                          val idx = managedChannels.indexOf(channel)
+                                                                          if (idx != -1) {
+                                                                              managedChannels[idx] = channel.copy(group = newGroup)
+                                                                          }
+                                                                      },
+                                                                      label = { Text("ক্যাটাগরি", fontSize = 9.sp) },
+                                                                      singleLine = true,
+                                                                      modifier = Modifier.weight(1f),
+                                                                      textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
+                                                                  )
 
-                                                              // Category text box override
-                                                              var catInput by remember(channel.name) {
-                                                                  mutableStateOf(categoryOverrides[channel.name] ?: channel.group)
+                                                                  // Read-only stream link display
+                                                                  Text(
+                                                                      text = channel.streamUrl,
+                                                                      fontSize = 9.sp,
+                                                                      color = Color.Gray,
+                                                                      maxLines = 1,
+                                                                      overflow = TextOverflow.Ellipsis,
+                                                                      modifier = Modifier.weight(1f).padding(top = 8.dp)
+                                                                  )
                                                               }
-                                                              OutlinedTextField(
-                                                                  value = catInput,
-                                                                  onValueChange = {
-                                                                      catInput = it
-                                                                      categoryOverrides[channel.name] = it
-                                                                  },
-                                                                  label = { Text("Category", fontSize = 8.sp) },
-                                                                  singleLine = true,
-                                                                  modifier = Modifier.width(100.dp),
-                                                                  textStyle = LocalTextStyle.current.copy(fontSize = 11.sp)
-                                                              )
                                                           }
                                                       }
                                                   }
@@ -1636,25 +1869,26 @@ fun AdminScreen(
 
                                           Button(
                                               onClick = {
-                                                  if (approvedList.isEmpty()) {
+                                                  val finalizedChannels = managedChannels.filter {
+                                                      selectedUrls.contains(it.streamUrl)
+                                                  }
+                                                  if (finalizedChannels.isEmpty()) {
                                                       Toast.makeText(context, "কোন চ্যানেল সিলেক্ট করা হয়নি!", Toast.LENGTH_SHORT).show()
                                                       return@Button
                                                   }
-                                                  // Map approved channels to updated categories
-                                                  val finalizedChannels = approvedList.map { ch ->
-                                                      val overriddenCat = categoryOverrides[ch.name] ?: ch.group
-                                                      ch.copy(group = overriddenCat.ifBlank { "All" })
-                                                  }
+
                                                   // Serialize back to M3U format
                                                   val serializedM3u = serializeChannelsToM3u(finalizedChannels)
                                                   // Save into active M3U file settings
                                                   iptvFileContentInput = serializedM3u
+                                                  iptvPendingFileContentInput = "" // Clear pending as it is published
                                                   val updated = settings.copy(
-                                                      iptvFileContent = serializedM3u
+                                                      iptvFileContent = serializedM3u,
+                                                      iptvPendingFileContent = ""
                                                   )
                                                   AppConfigManager.saveSettings(context, updated)
                                                   settings = updated
-                                                  Toast.makeText(context, "${finalizedChannels.size} টি চ্যানেল সফলভাবে ক্যাটাগরিসহ পাবলিশ হয়েছে!", Toast.LENGTH_LONG).show()
+                                                  Toast.makeText(context, "${finalizedChannels.size} টি চ্যানেল সফলভাবে সেভ ও পাবলিশ হয়েছে!", Toast.LENGTH_LONG).show()
                                                   onConfigUpdated()
                                               },
                                               modifier = Modifier.fillMaxWidth(),
@@ -1665,6 +1899,78 @@ fun AdminScreen(
                                                   Text("সিলেক্ট করা চ্যানেলগুলো অ্যাপে পাবলিশ করুন", color = Color.White)
                                               }
                                           }
+                                      }
+
+                                      // Add Manual Channel Dialog
+                                      if (showAddChannelDialog) {
+                                          AlertDialog(
+                                              onDismissRequest = { showAddChannelDialog = false },
+                                              title = { Text("নতুন চ্যানেল যোগ করুন") },
+                                              text = {
+                                                  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                      OutlinedTextField(
+                                                          value = newChannelName,
+                                                          onValueChange = { newChannelName = it },
+                                                          label = { Text("চ্যানেলের নাম (আবশ্যক)") },
+                                                          singleLine = true,
+                                                          modifier = Modifier.fillMaxWidth()
+                                                      )
+                                                      OutlinedTextField(
+                                                          value = newChannelUrl,
+                                                          onValueChange = { newChannelUrl = it },
+                                                          label = { Text("স্ট্রীম URL/M3U লিংক (আবশ্যক)") },
+                                                          singleLine = true,
+                                                          modifier = Modifier.fillMaxWidth()
+                                                      )
+                                                      OutlinedTextField(
+                                                          value = newChannelCat,
+                                                          onValueChange = { newChannelCat = it },
+                                                          label = { Text("ক্যাটাগরি/গ্রুপ") },
+                                                          singleLine = true,
+                                                          modifier = Modifier.fillMaxWidth()
+                                                      )
+                                                      OutlinedTextField(
+                                                          value = newChannelLogo,
+                                                          onValueChange = { newChannelLogo = it },
+                                                          label = { Text("লোগো URL (ঐচ্ছিক)") },
+                                                          singleLine = true,
+                                                          modifier = Modifier.fillMaxWidth()
+                                                      )
+                                                  }
+                                              },
+                                              confirmButton = {
+                                                  Button(
+                                                      onClick = {
+                                                          if (newChannelName.isBlank() || newChannelUrl.isBlank()) {
+                                                              Toast.makeText(context, "নাম এবং লিংক প্রদান করতে হবে!", Toast.LENGTH_SHORT).show()
+                                                              return@Button
+                                                          }
+                                                          val newChan = IptvChannel(
+                                                              name = newChannelName.trim(),
+                                                              streamUrl = newChannelUrl.trim(),
+                                                              group = newChannelCat.trim().ifBlank { "All" },
+                                                              logoUrl = newChannelLogo.trim()
+                                                          )
+                                                          managedChannels.add(newChan)
+                                                          selectedUrls.add(newChan.streamUrl)
+                                                          // Reset inputs
+                                                          newChannelName = ""
+                                                          newChannelUrl = ""
+                                                          newChannelCat = "All"
+                                                          newChannelLogo = ""
+                                                          showAddChannelDialog = false
+                                                          Toast.makeText(context, "চ্যানেলটি তালিকায় যোগ করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                                                      }
+                                                  ) {
+                                                      Text("যোগ করুন")
+                                                  }
+                                              },
+                                              dismissButton = {
+                                                  TextButton(onClick = { showAddChannelDialog = false }) {
+                                                      Text("বাতিল")
+                                                  }
+                                              }
+                                          )
                                       }
                                   }
                               }

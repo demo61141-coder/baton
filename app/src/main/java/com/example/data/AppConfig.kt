@@ -41,7 +41,8 @@ data class AppSettings(
     val adsEnabled: Boolean = true,
     val adNetwork: String = "monetag", // monetag or startapp
     val backAdEnabled: Boolean = true,
-    val sheetId: String = "1X-63B8vLp4S7AitgS7W0G8rJc1g_2V63Bf_SjKq_Xq0", // default placeholder sheet ID
+    val sheetId: String = "", // Retrieve dynamically from GitHub config.json; no longer hardcoded
+    val githubConfigUrl: String = "https://raw.githubusercontent.com/demo61141/all-live-config/main/config.json", // Raw URL to the GitHub config.json
     val lastNotificationTitle: String = "Welcome!",
     val lastNotificationBody: String = "Thanks for joining All Live streams.",
     val sponsorText: String = "SPONSORED BY MONETAG",
