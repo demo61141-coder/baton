@@ -113,6 +113,31 @@ fun HomeScreen(
                 // Fail silently to keep the experience completely seamless and offline-first
             }
         }
+
+        // Step 3: Automatically check GitHub config.json every 30 minutes while the app is running.
+        // If the spreadsheetId changes, automatically refresh all Google Sheets data.
+        coroutineScope.launch {
+            while (true) {
+                delay(30 * 60 * 1000) // Wait 30 minutes
+                try {
+                    val currentSettings = AppConfigManager.loadSettings(context)
+                    val oldSheetId = currentSettings.sheetId
+                    Log.d("HomeScreen", "Periodic check: fetching Spreadsheet ID from GitHub config.json...")
+                    val fetchedSheetId = GitHubConfigManager.fetchSpreadsheetIdFromGitHub(currentSettings.githubConfigUrl)
+                    if (!fetchedSheetId.isNullOrBlank() && fetchedSheetId != oldSheetId) {
+                        Log.d("HomeScreen", "Periodic check detected Spreadsheet ID change from '$oldSheetId' to '$fetchedSheetId'. Synchronizing automatically...")
+                        val success = GitHubConfigManager.fetchAndSyncWithGitHub(context)
+                        if (success) {
+                            reloadAll()
+                        }
+                    } else {
+                        Log.d("HomeScreen", "Periodic check: Spreadsheet ID unchanged ('$oldSheetId').")
+                    }
+                } catch (e: Exception) {
+                    Log.e("HomeScreen", "Periodic GitHub check/sync failed", e)
+                }
+            }
+        }
     }
 
     // Trigger 5-sec ad loop before showing the developer dialog
