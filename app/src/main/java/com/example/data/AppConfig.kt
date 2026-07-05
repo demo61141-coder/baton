@@ -42,7 +42,7 @@ data class AppSettings(
     val adNetwork: String = "monetag", // monetag or startapp
     val backAdEnabled: Boolean = true,
     val sheetId: String = "", // Retrieve dynamically from GitHub config.json; no longer hardcoded
-    val githubConfigUrl: String = "https://raw.githubusercontent.com/demo61141-coder/baton/main/config.json", // Raw URL to the GitHub config.json
+    val githubConfigUrl: String = "https://raw.githubusercontent.com/demo61141-coder/baton/refs/heads/main/config.json", // Raw URL to the GitHub config.json
     val lastNotificationTitle: String = "Welcome!",
     val lastNotificationBody: String = "Thanks for joining All Live streams.",
     val sponsorText: String = "SPONSORED BY MONETAG",
